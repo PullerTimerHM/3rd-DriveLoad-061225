@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>3rd Shift Timeline</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; background: white; color: black; padding: 20px; }
+  .container { max-width: 1200px; margin: 0 auto; }
+  .header { background: white; border: 2px solid black; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+  .header h1 { color: black; margin-bottom: 15px; font-size: 2rem; }
+  .controls { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }
+  .time-display { display: flex; gap: 20px; font-size: 1.2rem; font-weight: bold; }
+  .takt-control label { margin-right: 10px; font-weight: bold; }
+  .takt-control select { padding: 5px 10px; border: 2px solid black; background: white; color: black; border-radius: 4px; font-size: 1rem; }
+  .timeline-section { background: white; border: 2px solid black; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+  .timeline-wrapper { overflow-x: auto; border: 2px solid black; border-radius: 6px; background: white; padding: 15px; }
+  .timeline-container { position: relative; min-width: max-content; }
+  .timeline { display: flex; border: 2px solid black; border-radius: 4px; background: white; position: relative; height: 120px; }
+  .time-block { border-right: 2px solid black; background: white; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; position: relative; font-weight: bold; color: black; transition: background-color 0.2s; }
+  .time-block:last-child { border-right: none; }
+  .time-block:hover:not(.break-block) { background: #f0f0f0; }
+  .time-block.clicked { background: yellow !important; color: black; }
+  .time-block.break-block { background: black !important; color: white; cursor: not-allowed; }
+  .click-info { font-size: 10px; background: rgba(0, 0, 0, 0.7); color: white; padding: 2px 4px; border-radius: 3px; margin-top: 2px; }
+  .time-indicator { position: absolute; top: 0; bottom: 0; width: 3px; background: red; z-index: 100; transition: left 0.5s ease; }
+  .label-row { display: flex; margin-top: 10px; }
+  .time-label { border: 1px solid black; border-right: none; background: white; color: black; padding: 8px 4px; text-align: center; font-size: 12px; font-weight: bold; }
+  .time-label:last-child { border-right: 1px solid black; }
+  .info-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .shift-info, .click-log { background: white; border: 2px solid black; border-radius: 8px; padding: 20px; }
+  .shift-info h3, .click-log h3 { color: black; margin-bottom: 15px; border-bottom: 2px solid black; padding-bottom: 5px; }
+  .shift-info p { margin-bottom: 8px; color: black; }
+  #click-log-content { max-height: 200px; overflow-y: auto; margin-bottom: 15px; border: 1px solid black; padding: 10px; background: white; }
+  .log-entry { padding: 5px 0; border-bottom: 1px solid #ccc; color: black; }
+  .log-entry:last-child { border-bottom: none; }
+  #download-log { background: white; color: black; border: 2px solid black; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+  #download-log:hover { background: #f0f0f0; }
+  .comment-input { width: 90%; font-size: 10px; margin-top: 2px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>3rd Shift Timeline Tracker</h1>
+    <div class="controls">
+      <div class="time-display">
+        <span id="current-date"></span>
+        <span id="current-time"></span>
+      </div>
+      <div class="takt-control">
+        <label for="takt-time">Takt Time (minutes):</label>
+        <select id="takt-time">
+          <option value="3">3 minutes</option>
+          <option value="4">4 minutes</option>
+          <option value="5">5 minutes</option>
+          <option value="6" selected>6 minutes</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="timeline-section">
+    <div style="margin-bottom: 10px;">
+      <label for="team-member" style="font-weight: bold; margin-right: 10px;">Team Member:</label>
+      <select id="team-member" style="padding: 5px 10px; border: 2px solid black; border-radius: 4px; font-size: 1rem;">
+        <option value="Cameron C.">Cameron C.</option>
+        <option value="Edwardo B.">Edwardo B.</option>
+        <option value="Logan M.">Logan M.</option>
+        <option value="Sergio C.">Sergio C.</option>
+        <option value="Talan N.">Talan N.</option>
+        <option value="Evan N.">Evan N.</option>
+      </select>
+    </div>
+
+    <div class="timeline-wrapper">
+      <div class="timeline-container">
+        <div class="timeline" id="main-timeline"></div>
+        <div class="time-indicator" id="time-indicator"></div>
+        <div class="label-row" id="timeline-labels"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-panel">
+    <div class="shift-info">
+      <h3>Shift Information</h3>
+      <p><strong>Start:</strong> 11:10 PM</p>
+      <p><strong>End:</strong> 7:00 AM</p>
+      <p><strong>Break 1:</strong> 2:00 AM - 2:30 AM</p>
+      <p><strong>Break 2:</strong> 4:30 AM - 4:50 AM</p>
+    </div>
+    <div class="click-log">
+      <h3>Click Log</h3>
+      <div id="click-log-content"></div>
+      <button id="download-log">Download Log</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SHIFT_START_HOUR = 23;
+const SHIFT_START_MINUTE = 10;
+const SHIFT_END_HOUR = 7;
+const BREAK_TIMES = [{ start: "02:00", end: "02:30" }, { start: "04:30", end: "04:50" }];
+let taktTimeMinutes = 6;
+const BLOCK_BASE_WIDTH = 80;
+let clickCounter = 0;
+let clickLog = [];
+
+function timeToMinutes(timeStr) { const [h,m]=timeStr.split(':').map(Number); return h*60+m; }
+function minutesToTime(m) { const h=Math.floor(m/60)%24; const mi=m%60; return `${h.toString().padStart(2,'0')}:${mi.toString().padStart(2,'0')}`; }
+function getShiftDuration() { return 8*60; }
+function getCurrentShiftMinutes() { const now=new Date(); const h=now.getHours(); const m=now.getMinutes(); let min; if (h>SHIFT_START_HOUR||(h===SHIFT_START_HOUR&&m>=SHIFT_START_MINUTE)){min=(h-SHIFT_START_HOUR)*60+(m-SHIFT_START_MINUTE);}else if(h<SHIFT_END_HOUR||(h===SHIFT_END_HOUR&&m<SHIFT_START_MINUTE)){min=(24-SHIFT_START_HOUR)*60-SHIFT_START_MINUTE+h*60+m;}else{return -1;} return min; }
+function clearTimeline() { document.getElementById('main-timeline').innerHTML = ''; document.getElementById('timeline-labels').innerHTML = ''; }
+
+function generateTimeline() {
+  const timeline = document.getElementById('main-timeline');
+  const labels = document.getElementById('timeline-labels');
+  clearTimeline();
+  let currentMinutes = 0;
+  while (currentMinutes < getShiftDuration()) {
+    const actualMinutes = (SHIFT_START_HOUR * 60 + SHIFT_START_MINUTE + currentMinutes) % (24 * 60);
+    const actualTime = minutesToTime(actualMinutes);
+    const isBreak = BREAK_TIMES.find(b => b.start === actualTime);
+    if (isBreak) {
+      const breakDur = timeToMinutes(isBreak.end) - timeToMinutes(isBreak.start);
+      const w = (breakDur / taktTimeMinutes) * BLOCK_BASE_WIDTH;
+      const block = document.createElement('div');
+      block.className='time-block break-block';
+      block.style.width=`${w}px`;
+      block.textContent='BREAK';
+      const label = document.createElement('div');
+      label.className='time-label';
+      label.style.width=`${w}px`;
+      label.textContent=`${isBreak.start} - ${isBreak.end}`;
+      timeline.appendChild(block);
+      labels.appendChild(label);
+      currentMinutes += breakDur;
+      continue;
+    }
+    let dur = taktTimeMinutes;
+    for (const b of BREAK_TIMES) {
+      const bMin = timeToMinutes(b.start) >= SHIFT_START_HOUR * 60 + SHIFT_START_MINUTE
+        ? timeToMinutes(b.start) - (SHIFT_START_HOUR * 60 + SHIFT_START_MINUTE)
+        : timeToMinutes(b.start) + (24 * 60 - (SHIFT_START_HOUR * 60 + SHIFT_START_MINUTE));
+      if (bMin > currentMinutes && bMin < currentMinutes + taktTimeMinutes) { dur = bMin - currentMinutes; break; }
+    }
+    const w = (dur / taktTimeMinutes) * BLOCK_BASE_WIDTH;
+    const block = document.createElement('div');
+    block.className='time-block';
+    block.style.width=`${w}px`;
+    block.dataset.startTime=actualTime;
+    block.dataset.duration=dur;
+
+    const commentInput = document.createElement('input');
+    commentInput.type='text';
+    commentInput.placeholder='Comment';
+    commentInput.className='comment-input';
+    block.appendChild(commentInput);
+
+    // Always save updated comments to log if entry exists
+    commentInput.addEventListener('input', () => {
+      const entry = clickLog.find(e => e.blockTime === actualTime);
+      if (entry) {
+        entry.comment = commentInput.value;
+        updateClickLogDisplay();
+      }
+    });
+
+    block.addEventListener('click', () => handleBlockClick(block, actualTime));
+    timeline.appendChild(block);
+
+    const label = document.createElement('div');
+    label.className='time-label';
+    label.style.width=`${w}px`;
+    const dH=Math.floor(actualMinutes/60);
+    const dM=actualMinutes%60;
+    const ampm=dH>=12?'PM':'AM';
+    const h12=dH===0?12:dH>12?dH-12:dH;
+    label.textContent=`${h12}:${dM.toString().padStart(2,'0')} ${ampm}`;
+    labels.appendChild(label);
+    currentMinutes += dur;
+  }
+}
+
+function handleBlockClick(block, timeStr) {
+  if (!block.classList.contains('clicked')) {
+    const now = new Date();
+    clickCounter++;
+    block.classList.add('clicked');
+    const clickInfo = document.createElement('div');
+    clickInfo.className='click-info';
+    clickInfo.textContent = `#${clickCounter} ${now.toLocaleTimeString()}`;
+    block.appendChild(clickInfo);
+    const teamMember = document.getElementById('team-member').value;
+    const commentInput = block.querySelector('.comment-input');
+    const comment = commentInput.value || '';
+    clickLog.push({
+      id: clickCounter,
+      blockTime: timeStr,
+      clickTime: now.toLocaleTimeString(),
+      timestamp: now.toISOString(),
+      teamMember,
+      comment
+    });
+    updateClickLogDisplay();
+  }
+}
+
+function updateClickLogDisplay() {
+  const log=document.getElementById('click-log-content');
+  log.innerHTML='';
+  clickLog.slice(-10).reverse().forEach(e=>{
+    const d=document.createElement('div');
+    d.className='log-entry';
+    d.textContent=`#${e.id} - Block: ${e.blockTime} - Clicked: ${e.clickTime} - ${e.teamMember} - Comment: ${e.comment}`;
+    log.appendChild(d);
+  });
+}
+function updateTimeIndicator() {
+  const ind=document.getElementById('time-indicator');
+  const min=getCurrentShiftMinutes();
+  if(min<0||min>=getShiftDuration()){ind.style.display='none'; return;}
+  ind.style.display='block';
+  ind.style.left=`${(min/getShiftDuration())*100}%`;
+  scrollToIndicator();
+}
+function scrollToIndicator() {
+  const w=document.querySelector('.timeline-wrapper');
+  const i=document.getElementById('time-indicator');
+  w.scrollTo({ left: Math.max(0,i.offsetLeft - w.clientWidth/2), behavior: 'smooth' });
+}
+function updateTimeDisplay() {
+  const n=new Date();
+  document.getElementById('current-date').textContent=n.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  document.getElementById('current-time').textContent=n.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+}
+function downloadClickLog() {
+  if (!clickLog.length) { alert('No clicks recorded yet!'); return; }
+  const csv='Click ID,Block Time,Click Time,Team Member,Comment,Timestamp\n'+clickLog.map(e=>`${e.id},${e.blockTime},${e.clickTime},${e.teamMember},"${e.comment}",${e.timestamp}`).join('\n');
+  const b=new Blob([csv], { type:'text/csv' }); const u=URL.createObjectURL(b); const l=document.createElement('a'); l.href=u; l.download=`third_shift_clicks_${new Date().toISOString().split('T')[0]}.csv`; l.click(); URL.revokeObjectURL(u);
+}
+
+function initializeApp() {
+  document.getElementById('takt-time').addEventListener('change', e=>{ taktTimeMinutes=+e.target.value; generateTimeline(); updateTimeIndicator(); });
+  document.getElementById('download-log').addEventListener('click', downloadClickLog);
+  generateTimeline(); updateTimeDisplay(); updateTimeIndicator();
+  setInterval(updateTimeDisplay, 1000); setInterval(updateTimeIndicator, 60000);
+}
+
+if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', initializeApp); else initializeApp();
+</script>
+
+<script> window.addEventListener('beforeunload', function (e) { e.preventDefault(); e.returnValue = ''; }); </script>
+</body>
+</html>
